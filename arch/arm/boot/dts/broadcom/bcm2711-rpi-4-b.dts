@@ -16,6 +16,10 @@
 		stdout-path = "serial1:115200n8";
 	};
 
+	__overrides__ {
+		spi = <&spi>,"status";
+	};
+
 	cam1_reg: regulator-cam1 {
 		compatible = "regulator-fixed";
 		regulator-name = "cam1-reg";
@@ -142,6 +146,15 @@
 			  "RGMII_TXD1",		/* 55 */
 			  "RGMII_TXD2",
 			  "RGMII_TXD3";
+	spi0_pins: spi0_pins {
+		brcm,pins = <9 10 11>;
+		brcm,function = <BCM2835_FSEL_ALT0>;
+	};
+
+	spi0_cs_pins: spi0_cs_pins {
+		brcm,pins = <8 7>;
+		brcm,function = <BCM2835_FSEL_GPIO_OUT>;
+	};
 };
 
 &hdmi0 {
@@ -265,6 +278,33 @@
 
 &vec {
 	status = "disabled";
+};
+
+&spi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins &spi0_cs_pins>;
+	dmas = <&dma 6>, <&dma 7>;
+	dma-names = "tx", "rx";
+	cs-gpios = <&gpio 8 1>, <&gpio 7 1>;
+	status = "okay";
+
+	spidev0: spidev@0{
+		compatible = "silabs,si3210";
+		reg = <0>;	/* CE0 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-max-frequency = <125000000>;
+		status = "okay";
+	};
+
+	spidev1: spidev@1{
+		compatible = "silabs,si3210";
+		reg = <1>;	/* CE1 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-max-frequency = <125000000>;
+		status = "okay";
+	};
 };
 
 &wifi_pwrseq {
