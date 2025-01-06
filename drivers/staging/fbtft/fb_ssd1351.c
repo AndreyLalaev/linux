@@ -81,15 +81,19 @@ static int set_var(struct fbtft_par *par)
 	switch (par->info->var.rotate) {
 	case 0:
 		write_reg(par, 0xA0, remap | 0x00 | BIT(4));
+		pr_info("0: 0xA0 = %lu", remap | 0x00 | BIT(4));
 		break;
 	case 270:
 		write_reg(par, 0xA0, remap | 0x03 | BIT(4));
+		pr_info("270: 0xA0 = %lu", remap | 0x03 | BIT(4));
 		break;
 	case 180:
 		write_reg(par, 0xA0, remap | 0x02);
+		pr_info("180: 0xA0 = 0x%x", remap | 0x02);
 		break;
 	case 90:
 		write_reg(par, 0xA0, remap | 0x01);
+		pr_info("90: 0xA0 = 0x%x", remap | 0x01);
 		break;
 	}
 

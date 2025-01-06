@@ -288,23 +288,41 @@
 	cs-gpios = <&gpio 8 1>, <&gpio 7 1>;
 	status = "okay";
 
-	spidev0: spidev@0{
+	/*spidev@0 {
 		compatible = "silabs,si3210";
-		reg = <0>;	/* CE0 */
-		#address-cells = <1>;
-		#size-cells = <0>;
+		reg = <0>;
 		spi-max-frequency = <125000000>;
 		status = "okay";
+	};*/
+
+	oled@0 {
+		compatible = "solomon,ssd1351";
+		reg = <0x0>;
+		solomon,width  = <128>;
+		solomon,height = <96>;
+		reset-gpios = <&gpio 27 GPIO_ACTIVE_LOW>;
+		dc-gpios = <&gpio 25 GPIO_ACTIVE_HIGH>;
+		spi-max-frequency = <4500000>;
 	};
 
-	spidev1: spidev@1{
-		compatible = "silabs,si3210";
-		reg = <1>;	/* CE1 */
-		#address-cells = <1>;
-		#size-cells = <0>;
-		spi-max-frequency = <125000000>;
-		status = "okay";
-	};
+	/*ssd1351: ssd1351@0 {
+		compatible = "solomon,ssd1351";
+		reg = <0x0>;
+		spi-max-frequency = <4500000>;
+		bgr = <0>;
+		bpp = <16>;
+		rotate = <0>;
+		fps = <25>;
+		buswidth = <8>;
+		reset-gpios = <&gpio 27 GPIO_ACTIVE_LOW>;
+		dc-gpios = <&gpio 25 GPIO_ACTIVE_HIGH>;
+
+		debug = <0>;
+
+		solomon,height = <128>;
+		solomon,width = <128>;
+		solomon,page-offset = <0>;
+	};*/
 };
 
 &wifi_pwrseq {
