@@ -218,7 +218,7 @@ const struct ssd130x_deviceinfo ssd130x_variants[] = {
 	/* ssd135x family */
 	[SSD1351_ID] = {
 		.default_width = 128,
-		.default_height = 128,
+		.default_height = 96,
 		.family_id = SSD135X_FAMILY,
 	}
 };
@@ -770,17 +770,17 @@ static int ssd135x_init(struct ssd130x_device *ssd130x)
 		return ret;
 
 	/* Set Mux Ratio */
-	ret = ssd130x_write_cmd(ssd130x, 2, 0xca, 0x7f);
+	ret = ssd130x_write_cmd(ssd130x, 2, 0xca, ssd130x->height - 1);
 	if (ret < 0)
 		return ret;
 
 	/* Set Column Address */
-	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_COL_RANGE, 0x00, ssd130x->width - 1);
+	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_COL_RANGE, 0, ssd130x->width - 1);
 	if (ret < 0)
 		return ret;
 
 	/* Set Row Address */
-	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_ROW_RANGE, 0x00, ssd130x->height - 1);
+	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_ROW_RANGE, 0, ssd130x->height - 1);
 	if (ret < 0)
 		return ret;
 
@@ -795,7 +795,7 @@ static int ssd135x_init(struct ssd130x_device *ssd130x)
 		return ret;
 
 	/* Set Display Start */
-	ret = ssd130x_write_cmd(ssd130x, 2, SSD133X_SET_DISPLAY_START, ssd130x->height);
+	ret = ssd130x_write_cmd(ssd130x, 2, SSD133X_SET_DISPLAY_START, 0);
 	if (ret < 0)
 		return ret;
 
@@ -835,9 +835,9 @@ static int ssd135x_init(struct ssd130x_device *ssd130x)
 		return ret;
 
 	/* Set Contrast */
-	ret = ssd130x_write_cmd(ssd130x, 4, SSD135X_SET_CONTRAST, 0xc8, 0x80, 0xc8);
-	if (ret < 0)
-		return ret;
+	//ret = ssd130x_write_cmd(ssd130x, 4, SSD135X_SET_CONTRAST, 0xc8, 0x80, 0xc8);
+	//if (ret < 0)
+	//	return ret;
 
 	/* Set Master Contrast */
 	ret = ssd130x_write_cmd(ssd130x, 2, SSD135X_SET_MASTER_CONTRAST, 0x0f);
@@ -1071,26 +1071,15 @@ static int ssd135x_update_rect(struct ssd130x_device *ssd130x,
 	unsigned int y = rect->y1;
 	unsigned int columns = drm_rect_width(rect);
 	unsigned int rows = drm_rect_height(rect);
-	unsigned i = 0;
 	int ret;
 
-	if (columns == 8 && rows == 8) {
-		printk(KERN_INFO "dump: ");
-		for (i = 0; i < (pitch * rows); i++) {
-			if (data_array[i] != 0) {
-				printk(KERN_CONT "[%u]= 0x%x ", i, data_array[i]);
-			}
-		}
-	}
-
-	dev_info(ssd130x->dev, "x = %d; y = %d; columns = %d; rows = %d\n", x, y, columns, rows);
 	/* Set column start and end */
-	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_COL_RANGE, 0, 127);
+	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_COL_RANGE, x, x + columns - 1);
 	if (ret < 0)
 		return ret;
 
 	/* Set row start and end */
-	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_ROW_RANGE, 0, 95);
+	ret = ssd130x_write_cmd(ssd130x, 3, SSD133X_SET_ROW_RANGE, y, y + rows - 1);
 	if (ret < 0)
 		return ret;
 
@@ -1099,7 +1088,9 @@ static int ssd135x_update_rect(struct ssd130x_device *ssd130x,
 		return ret;
 
 	/* Write out update in one go since horizontal addressing mode is used */
-	ret = ssd130x_write_data(ssd130x, data_array, pitch * ssd130x->height);
+	//dev_info(ssd130x->dev, "writing %u bytes to [(%u; %u); (%u; %u)]\n",
+	//		pitch * rows, x, x + columns, y, y + rows);
+	ret = ssd130x_write_data(ssd130x, data_array, pitch * rows);
 
 	return ret;
 }
@@ -1288,7 +1279,7 @@ static int ssd135x_fb_blit_rect(struct drm_framebuffer *fb,
 
 	drm_gem_fb_end_cpu_access(fb, DMA_FROM_DEVICE);
 
-	/* pitch = 256 */
+	/* dts_pitch = 16 bytes */
 	ssd135x_update_rect(ssd130x, rect, data_array, dst_pitch);
 
 	return ret;
@@ -1524,7 +1515,7 @@ static void ssd135x_primary_plane_atomic_update(struct drm_plane *plane,
 	struct drm_plane_state *old_plane_state = drm_atomic_get_old_plane_state(state, plane);
 	struct drm_shadow_plane_state *shadow_plane_state = to_drm_shadow_plane_state(plane_state);
 	struct drm_crtc_state *crtc_state = drm_atomic_get_new_crtc_state(state, plane_state->crtc);
-	struct ssd130x_crtc_state *ssd130x_crtc_state =  to_ssd130x_crtc_state(crtc_state);
+	struct ssd130x_crtc_state *ssd130x_crtc_state = to_ssd130x_crtc_state(crtc_state);
 	struct drm_framebuffer *fb = plane_state->fb;
 	struct drm_atomic_helper_damage_iter iter;
 	struct drm_device *drm = plane->dev;
@@ -2123,6 +2114,7 @@ static int ssd135x_update_bl(struct backlight_device *bdev) {
 	int ret;
 
 	ssd130x->contrast = brightness;
+	return 0;
 
 	dev_info(ssd130x->dev, "Setting brightness to %d\n", brightness);
 	ret = ssd130x_write_cmd(ssd130x, 2, 0xb5, brightness > 0 ? 0x03: 0x02);
@@ -2135,7 +2127,7 @@ static int ssd135x_update_bl(struct backlight_device *bdev) {
 }
 
 static const struct backlight_ops ssd130xfb_bl_ops = {
-	.update_status	= ssd130x_update_bl,
+	.update_status	= ssd135x_update_bl,
 };
 
 static void ssd130x_parse_properties(struct ssd130x_device *ssd130x)

@@ -300,9 +300,10 @@
 		reg = <0x0>;
 		solomon,width  = <128>;
 		solomon,height = <96>;
-		reset-gpios = <&gpio 27 GPIO_ACTIVE_LOW>;
-		dc-gpios = <&gpio 25 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 6 GPIO_ACTIVE_LOW>;
+		dc-gpios = <&gpio 5 GPIO_ACTIVE_HIGH>;
 		spi-max-frequency = <4500000>;
+		status = "okay";
 	};
 
 	/*ssd1351: ssd1351@0 {
@@ -314,14 +315,15 @@
 		rotate = <0>;
 		fps = <25>;
 		buswidth = <8>;
-		reset-gpios = <&gpio 27 GPIO_ACTIVE_LOW>;
-		dc-gpios = <&gpio 25 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 6 GPIO_ACTIVE_LOW>;
+		dc-gpios = <&gpio 5 GPIO_ACTIVE_HIGH>;
 
 		debug = <0>;
 
-		solomon,height = <128>;
+		solomon,height = <96>;
 		solomon,width = <128>;
 		solomon,page-offset = <0>;
+		status = "okay";
 	};*/
 };
 
