@@ -1993,6 +1993,11 @@ config GPIO_MPSSE
 	  GPIO driver for FTDI's MPSSE interface. These can do input and
 	  output. Each MPSSE provides 16 IO pins.
 
+config GPIO_MICROCHIP_USB5816
+	tristate "Microchip USB5816 Hub Feature Controller"
+	help
+	  Microchip USB5816 Hub Feature Controller
+
 config GPIO_USBIO
 	tristate "Intel USBIO GPIO support"
 	depends on USB_USBIO
