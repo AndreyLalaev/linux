@@ -217,6 +217,20 @@ static int gpio_usb5816_direction_output(struct gpio_chip *gc,
 	return gpio_usb5816_set(gc, offset, value);
 }
 
+// AN2316-Configuration-Options-for-USB58xx-and-USB59xx-Application-Note-00002316.pdf
+static void configure_gpios(struct usb5816_priv *priv)
+{
+	struct device *dev = &priv->usb_dev->dev;
+	int err = 0;
+
+	err = usb58xx_read(priv, 0x0A1C, priv->in_buf, 1);
+	dev_dbg(dev, "%s:%d: err = %d; got 0x%x from 0x0A1C", __func__, __LINE__,
+			err, *priv->in_buf);
+
+	*priv->in_buf = 0x00;
+	usb58xx_write(priv, 0x0A1C, priv->in_buf, 1);
+}
+
 static int gpio_usb5816_probe(struct usb_interface *intf, const struct usb_device_id *id)
 {
 	struct device *dev = &intf->dev;
@@ -246,6 +260,8 @@ static int gpio_usb5816_probe(struct usb_interface *intf, const struct usb_devic
 	priv->in_buf = devm_kzalloc(dev, sizeof(u8), GFP_KERNEL);
 	if (!priv->in_buf)
 		return -ENOMEM;
+
+	configure_gpios(priv);
 
 	return devm_gpiochip_add_data(dev, &priv->gpio, priv);
 }
