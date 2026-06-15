@@ -57,6 +57,30 @@ struct usb5816_priv {
 	u8 *in_buf;
 };
 
+static int usb58xx_read(struct usb5816_priv *data, u16 reg, u8 *buf, size_t len)
+{
+	return usb_control_msg(data->usb_dev,
+			usb_rcvctrlpipe(data->usb_dev, 0),
+			USB58XX_READ_REQ,
+			USB_TYPE_VENDOR | USB_DIR_IN | USB_RECIP_INTERFACE,
+			reg,
+			0x00,
+			buf, len,
+			USB_CTRL_GET_TIMEOUT);
+}
+
+static int usb58xx_write(struct usb5816_priv *data, u16 reg, u8 *buf, size_t len)
+{
+	return usb_control_msg(data->usb_dev,
+			usb_sndctrlpipe(data->usb_dev, 0),
+			USB58XX_WRITE_REQ,
+			USB_TYPE_VENDOR | USB_DIR_OUT | USB_RECIP_INTERFACE,
+			reg,
+			0x00,
+			buf, len,
+			USB_CTRL_GET_TIMEOUT);
+}
+
 static int gpio_usb5816_get(struct gpio_chip *gc, unsigned int offset)
 {
 	struct usb5816_priv *priv = gpiochip_get_data(gc);
@@ -80,15 +104,11 @@ static int gpio_usb5816_get(struct gpio_chip *gc, unsigned int offset)
 		return -1;
 	}
 
-	err = usb_control_msg(priv->usb_dev,
-			usb_rcvctrlpipe(priv->usb_dev, 0),
-			USB58XX_READ_REQ,
-			USB_TYPE_VENDOR | USB_DIR_IN | USB_RECIP_INTERFACE,
-			reg,
-			0x00,
-			priv->in_buf, 1,
-			USB_CTRL_GET_TIMEOUT);
+	err = usb58xx_read(priv, reg, priv->in_buf, 1);
+
 	dev_dbg(dev, "err: %d; buf = 0x%x\n", err, *priv->in_buf);
+
+	val = *priv->in_buf >> (offset % 8);
 
 	return val;
 }
@@ -98,7 +118,6 @@ static int gpio_usb5816_set(struct gpio_chip *gc, unsigned int offset, int val)
 	struct usb5816_priv *priv = gpiochip_get_data(gc);
 	struct device *dev = &priv->usb_dev->dev;
 	u16 reg = 0;
-	u8 buf = 0x00;
 	int err = 0;
 
 	dev_dbg(dev, "%s:%d: Setting GPIO %u to %d\n", __func__, __LINE__, offset, val);
@@ -116,16 +135,17 @@ static int gpio_usb5816_set(struct gpio_chip *gc, unsigned int offset, int val)
 		return -1;
 	}
 
-	buf = val << (offset % 8);
-	dev_dbg(dev, "writing 0x%x to 0x%x\n", buf, reg);
-	err = usb_control_msg(priv->usb_dev,
-			usb_sndctrlpipe(priv->usb_dev, 0),
-			USB58XX_WRITE_REQ,
-			USB_TYPE_VENDOR | USB_DIR_OUT | USB_RECIP_INTERFACE,
-			reg,
-			0x00,
-			&buf, sizeof(buf),
-			USB_CTRL_GET_TIMEOUT);
+	err = usb58xx_read(priv, reg, priv->in_buf, 1);
+	dev_dbg(dev, "%s:%d: got 0x%x from 0x%x\n", __func__, __LINE__, *priv->in_buf, reg);
+
+	// TODO: should replace with bitmap?
+	if (val)
+		*priv->in_buf |= 1 << (offset % 8);
+	else
+		*priv->in_buf &= ~(1 << (offset % 8));
+
+	dev_dbg(dev, "%s:%d: set 0x%x to 0x%x\n", __func__, __LINE__, *priv->in_buf, reg);
+	err = usb58xx_write(priv, reg, priv->in_buf, 1);
 
 	return 0;
 }
@@ -141,21 +161,21 @@ static int gpio_usb5816_direction_input(struct gpio_chip *gc, unsigned int offse
 {
 	struct usb5816_priv *priv = gpiochip_get_data(gc);
 	struct device *dev = &priv->usb_dev->dev;
+	u16 reg = 0;
 	u8 buf = 0x00;
 	int err = 0;
 
 	dev_dbg(dev, "Setting GPIO %u to input\n", offset);
 	// FIXME
 	if (offset <= 7) {
-		buf = ~(1 << offset);
-		err = usb_control_msg(priv->usb_dev,
-				usb_sndctrlpipe(priv->usb_dev, 0),
-				USB58XX_WRITE_REQ,
-				USB_TYPE_VENDOR | USB_DIR_OUT | USB_RECIP_INTERFACE,
-				GPIO_1_7_DIR,
-				0x00,
-				&buf, sizeof(buf),
-				USB_CTRL_GET_TIMEOUT);
+		reg = GPIO_1_7_DIR;
+
+		err = usb58xx_read(priv, reg, priv->in_buf, 1);
+		dev_dbg(dev, "err: %d; buf = 0x%u\n", err, buf);
+
+		*priv->in_buf &= ~(1 << offset);
+
+		err = usb58xx_write(priv, reg, priv->in_buf, 1);
 		dev_dbg(dev, "err: %d; buf = 0x%u\n", err, buf);
 	}
 
@@ -169,7 +189,6 @@ static int gpio_usb5816_direction_output(struct gpio_chip *gc,
 	struct usb5816_priv *priv = gpiochip_get_data(gc);
 	struct device *dev = &priv->usb_dev->dev;
 	u16 reg = 0;
-	u8 buf = 0x00;
 	int err = 0;
 
 	dev_dbg(dev, "Setting GPIO %u to output (%d)\n", offset, value);
@@ -187,16 +206,13 @@ static int gpio_usb5816_direction_output(struct gpio_chip *gc,
 	}
 
 	// FIXME
-	buf = 1 << (offset % 8);
-	dev_dbg(dev, "Writing 0x%x to 0x%x\n", buf, reg);
-	err = usb_control_msg(priv->usb_dev,
-			usb_sndctrlpipe(priv->usb_dev, 0),
-			USB58XX_WRITE_REQ,
-			USB_TYPE_VENDOR | USB_DIR_OUT | USB_RECIP_INTERFACE,
-			reg,
-			0x00,
-			&buf, sizeof(buf),
-			USB_CTRL_GET_TIMEOUT);
+	err = usb58xx_read(priv, reg, priv->in_buf, 1);
+	dev_dbg(dev, "%s:%d: got 0x%x to 0x%x\n", __func__, __LINE__, *priv->in_buf, reg);
+
+	*priv->in_buf |= 1 << (offset % 8);
+
+	dev_dbg(dev, "%s:%d: set 0x%x to 0x%x\n", __func__, __LINE__, *priv->in_buf, reg);
+	err = usb58xx_write(priv, reg, priv->in_buf, 1);
 
 	return gpio_usb5816_set(gc, offset, value);
 }
