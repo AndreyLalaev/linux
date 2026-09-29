@@ -25,6 +25,10 @@ static const struct mfd_cell cv1800_rtcsys_subdev[] = {
 		.num_resources = 1,
 		.resources = &cv1800_rtcsys_irq_resources[0],
 	},
+	{
+		.name = "cv1800b-8051",
+		.num_resources = 0,
+	},
 };
 
 static int cv1800_rtcsys_probe(struct platform_device *pdev)

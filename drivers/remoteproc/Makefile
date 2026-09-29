@@ -12,6 +12,7 @@ remoteproc-y				+= remoteproc_virtio.o
 remoteproc-y				+= remoteproc_elf_loader.o
 obj-$(CONFIG_REMOTEPROC_CDEV)		+= remoteproc_cdev.o
 obj-$(CONFIG_AMD_MBV_BRAM_REMOTEPROC)	+= amd_mbv_bram_rproc.o
+obj-$(CONFIG_CV1800B_8051_REMOTEPROC)	+= cv1800b_8051_rproc.o
 obj-$(CONFIG_IMX_REMOTEPROC)		+= imx_rproc.o
 obj-$(CONFIG_IMX_DSP_REMOTEPROC)	+= imx_dsp_rproc.o
 obj-$(CONFIG_INGENIC_VPU_RPROC)		+= ingenic_rproc.o

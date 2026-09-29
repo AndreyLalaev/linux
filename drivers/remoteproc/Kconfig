@@ -32,6 +32,15 @@ config AMD_MBV_BRAM_REMOTEPROC
 
 	  If unsure, say N.
 
+config CV1800B_8051_REMOTEPROC
+	tristate "Sophgo CV1800B 8051 remoteproc support"
+	depends on SOPHGO_CV1800_RTCSYS || COMPILE_TEST
+	depends on RUST
+	help
+	  Say y or m here so support 8051 coprocessor.
+
+	  if unsure, say N.
+
 config IMX_REMOTEPROC
 	tristate "i.MX remoteproc support"
 	depends on ARCH_MXC
